@@ -9,8 +9,8 @@ export const metadata = {
     'Create and style custom text using any font, including your own uploaded fonts. Export as clean SVG or high-resolution PNG. Fast, browser-based, and free.',
   icons: {
     icon: [
-      { url : '/public/favicon.ico', sizes: 'any' },
-      { url: '/public/favicon.svg', type: 'image/svg+xml' },
+      { url : '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
   },
   keywords: [
@@ -44,7 +44,20 @@ export const metadata = {
     title: 'Styled Text to SVG',
     description:
       'Upload fonts, style text, and export as SVG or PNG. Built for designers and creators.',
-    images: ['/public/favicon.png'],
+    images: ['/favicon.png'],
   },
 };
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  )
+}
+
 

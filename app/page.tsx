@@ -429,7 +429,7 @@ export default function FontCustomizer() {
   return (
     <div className="container mx-auto py-4 px-2 md:py-8 md:px-4 min-h-screen flex flex-col" ref={containerRef}>
       <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center">Font Customization Tool</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center">Export Styled Text to SVG</h1>
         <p className="text-center text-muted-foreground max-w-2xl mx-auto">
           Create beautiful text designs with custom fonts, sizes, and colors. Perfect for social media posts, logos,
           headers, and more. Export your designs as PNG or SVG for use in any project.
