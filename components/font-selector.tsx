@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search, Star, StarOff } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
+import { Button } from "@/components/ui/button"
 
-// Popular Google Fonts
+// Google Fonts API URL
+const API_URL = "https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAd-_QvQBBTIcCJZE8X6RGFyVqAfR7hDBc"
+
+// Popular Google Fonts as fallback
 const POPULAR_FONTS = [
   "Inter",
   "Roboto",
@@ -32,36 +36,57 @@ const POPULAR_FONTS = [
 interface FontSelectorProps {
   onFontSelect: (font: string) => void
   selectedFont: string
+  favorites: string[]
+  onToggleFavorite: (font: string) => void
 }
 
-export default function FontSelector({ onFontSelect, selectedFont }: FontSelectorProps) {
+export default function FontSelector({ onFontSelect, selectedFont, favorites, onToggleFavorite }: FontSelectorProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [fonts, setFonts] = useState<string[]>(POPULAR_FONTS)
+  const [allFonts, setAllFonts] = useState<string[]>(POPULAR_FONTS)
   const [loading, setLoading] = useState(false)
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
-  // Load Google Fonts API
+  // Fetch fonts from Google Fonts API or use fallback
   useEffect(() => {
-    // This would typically fetch from Google Fonts API
-    // For this demo, we'll just filter the popular fonts list
+    const fetchFonts = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(API_URL)
+        const data = await response.json()
+
+        if (data && data.items) {
+          const fontNames = data.items.map((font: any) => font.family)
+          setAllFonts(fontNames)
+          setFonts(fontNames.slice(0, 100)) // Show first 100 fonts initially
+        }
+      } catch (error) {
+        console.error("Error fetching Google Fonts:", error)
+        // Fallback to popular fonts if API fails
+        setAllFonts(POPULAR_FONTS)
+        setFonts(POPULAR_FONTS)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFonts()
+  }, [])
+
+  // Filter fonts when search term changes
+  useEffect(() => {
     if (debouncedSearchTerm) {
       setLoading(true)
-      setTimeout(() => {
-        const filteredFonts = POPULAR_FONTS.filter((font) =>
-          font.toLowerCase().includes(debouncedSearchTerm.toLowerCase()),
-        )
-        setFonts(filteredFonts.length > 0 ? filteredFonts : POPULAR_FONTS)
-        setLoading(false)
-      }, 300)
+      const filteredFonts = allFonts.filter((font) => font.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
+      setFonts(filteredFonts.length > 0 ? filteredFonts : [])
+      setLoading(false)
     } else {
-      setFonts(POPULAR_FONTS)
+      setFonts(allFonts.slice(0, 100))
     }
-  }, [debouncedSearchTerm])
+  }, [debouncedSearchTerm, allFonts])
 
-  // Load font styles
+  // Load font styles for selected and previewed fonts
   useEffect(() => {
-    // In a real app, we would dynamically load the font from Google Fonts
-    // For this demo, we'll assume the fonts are available
     const link = document.createElement("link")
     link.href = `https://fonts.googleapis.com/css2?family=${selectedFont.replace(" ", "+")}&display=swap`
     link.rel = "stylesheet"
@@ -77,7 +102,7 @@ export default function FontSelector({ onFontSelect, selectedFont }: FontSelecto
       <div className="relative">
         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search fonts..."
+          placeholder="Search Google fonts..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-8"
@@ -89,21 +114,39 @@ export default function FontSelector({ onFontSelect, selectedFont }: FontSelecto
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-muted-foreground">Loading fonts...</p>
           </div>
-        ) : (
+        ) : fonts.length > 0 ? (
           <ul className="space-y-1">
             {fonts.map((font) => (
               <li
                 key={font}
-                className={`p-2 cursor-pointer rounded-md hover:bg-muted transition-colors ${
+                className={`p-2 cursor-pointer rounded-md hover:bg-muted transition-colors flex justify-between items-center ${
                   selectedFont === font ? "bg-muted" : ""
                 }`}
-                style={{ fontFamily: `"${font}", sans-serif` }}
                 onClick={() => onFontSelect(font)}
               >
-                {font}
+                <span style={{ fontFamily: `"${font}", sans-serif` }}>{font}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleFavorite(font)
+                  }}
+                >
+                  {favorites.includes(font) ? (
+                    <Star className="h-4 w-4 fill-current text-amber-400" />
+                  ) : (
+                    <StarOff className="h-4 w-4" />
+                  )}
+                </Button>
               </li>
             ))}
           </ul>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-muted-foreground">No fonts found matching "{searchTerm}"</p>
+          </div>
         )}
       </div>
     </div>
