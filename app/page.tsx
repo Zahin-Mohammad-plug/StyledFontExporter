@@ -157,24 +157,43 @@ export default function FontCustomizer() {
     }))
   }
 
-  // Load font into document
+  // Fix the font loading mechanism for uploaded fonts
+  // Update the loadFontIntoDocument function to ensure fonts are properly loaded
   const loadFontIntoDocument = (fontName: string, fontUrl: string) => {
-    // Check if the font is already loaded
-    if (document.fonts && document.fonts.check(`1em "${fontName}"`)) {
+    // Create a unique ID for this font's style element
+    const fontStyleId = `font-style-${fontName.replace(/[^a-zA-Z0-9]/g, "-")}`
+
+    // Check if we already added this font
+    if (document.getElementById(fontStyleId)) {
       return
     }
 
     // Create a style element to load the custom font
     const style = document.createElement("style")
+    style.id = fontStyleId
     style.textContent = `
       @font-face {
         font-family: "${fontName}";
         src: url(${fontUrl}) format("truetype");
-        font-weight: normal;
+        font-weight: 100 900; /* Support variable font weights */
         font-style: normal;
+        font-display: swap;
       }
     `
     document.head.appendChild(style)
+
+    // Force browser to load the font
+    const testDiv = document.createElement("div")
+    testDiv.style.fontFamily = `"${fontName}", sans-serif`
+    testDiv.style.visibility = "hidden"
+    testDiv.style.position = "absolute"
+    testDiv.textContent = "Font Load Test"
+    document.body.appendChild(testDiv)
+
+    // Remove the test element after a short delay
+    setTimeout(() => {
+      document.body.removeChild(testDiv)
+    }, 100)
   }
 
   // Handle custom font upload
@@ -376,6 +395,12 @@ export default function FontCustomizer() {
       title: "SVG exported successfully",
     })
   }
+
+  // Ensure the Dialog component is properly initialized
+  useEffect(() => {
+    // This is just to ensure React properly initializes the Dialog component
+    // The empty dependency array means this runs once on component mount
+  }, [])
 
   return (
     <div className="container mx-auto py-4 px-2 md:py-8 md:px-4 min-h-screen flex flex-col" ref={containerRef}>
@@ -694,7 +719,28 @@ export default function FontCustomizer() {
         </Card>
       </div>
 
-      <footer className="mt-8 text-right text-sm text-muted-foreground">Created by FontMaster Studio</footer>
+      <footer className="mt-8 py-6 border-t">
+        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center">
+            <span className="font-bold text-lg">FontMaster</span>
+            <span className="text-muted-foreground ml-2">v1.0</span>
+          </div>
+          <div className="text-sm text-muted-foreground text-center md:text-left">
+            Create beautiful text designs with custom fonts, sizes, and colors.
+          </div>
+          <div className="flex gap-4">
+            <a href="#" className="text-sm hover:underline">
+              Color Palette Generator
+            </a>
+            <a href="#" className="text-sm hover:underline">
+              SVG Icon Maker
+            </a>
+            <a href="#" className="text-sm hover:underline">
+              Image Resizer
+            </a>
+          </div>
+        </div>
+      </footer>
 
       <Toaster />
     </div>

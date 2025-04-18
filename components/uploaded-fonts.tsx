@@ -58,7 +58,16 @@ export default function UploadedFonts({
                 }`}
                 onClick={() => onFontSelect(font.name)}
               >
-                <span style={{ fontFamily: `"${font.name}", sans-serif` }}>{font.name}</span>
+                <span
+                  style={{
+                    fontFamily: `"${font.name}", sans-serif`,
+                    // Force the browser to use the custom font
+                    fontWeight: 400,
+                    fontStyle: "normal",
+                  }}
+                >
+                  {font.name}
+                </span>
                 <Button
                   variant="ghost"
                   size="icon"
