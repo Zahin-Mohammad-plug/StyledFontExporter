@@ -12,10 +12,18 @@ import { Slider } from "@/components/ui/slider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Download, AlignLeft, AlignCenter, AlignRight, AlignJustify, Star } from "lucide-react"
+import { Download, AlignLeft, AlignCenter, AlignRight, AlignJustify, Star, HelpCircle } from "lucide-react"
 import { HexColorPicker } from "react-colorful"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import FontSelector from "@/components/font-selector"
 import UploadedFonts from "@/components/uploaded-fonts"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -37,7 +45,11 @@ interface TextSettings {
 interface FontData {
   name: string
   url: string
+  weights?: number[]
 }
+
+// Available font weights
+const ALL_FONT_WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900]
 
 export default function FontCustomizer() {
   // State for text settings
@@ -56,6 +68,7 @@ export default function FontCustomizer() {
   const [selectedFont, setSelectedFont] = useState("Inter")
   const [uploadedFonts, setUploadedFonts] = useState<FontData[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
+  const [availableWeights, setAvailableWeights] = useState<number[]>(ALL_FONT_WEIGHTS)
 
   const previewRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -110,6 +123,32 @@ export default function FontCustomizer() {
     }
   }, [settings, selectedFont])
 
+  // Update available weights when font changes
+  useEffect(() => {
+    // For uploaded fonts, check if we have weight information
+    const uploadedFont = uploadedFonts.find((f) => f.name === selectedFont)
+    if (uploadedFont && uploadedFont.weights) {
+      setAvailableWeights(uploadedFont.weights)
+
+      // If current weight is not available, set to closest available
+      if (!uploadedFont.weights.includes(settings.fontWeight)) {
+        const closestWeight = findClosestWeight(settings.fontWeight, uploadedFont.weights)
+        updateSettings({ fontWeight: closestWeight })
+      }
+      return
+    }
+
+    // For preset fonts, we'll assume all weights are available
+    // In a real app, you would check which weights are actually available
+    setAvailableWeights(ALL_FONT_WEIGHTS)
+  }, [selectedFont, uploadedFonts])
+
+  // Find closest available font weight
+  const findClosestWeight = (target: number, available: number[]): number => {
+    if (available.includes(target)) return target
+    return available.reduce((prev, curr) => (Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev))
+  }
+
   // Update settings with a partial update
   const updateSettings = (update: Partial<TextSettings>) => {
     setSettings((prev) => ({
@@ -148,10 +187,16 @@ export default function FontCustomizer() {
         // Clean up font name - remove extension and replace spaces/special chars
         const fontName = file.name.split(".")[0].replace(/[^a-zA-Z0-9]/g, "_")
 
+        // Create a new font object with default weights
+        const newFont: FontData = {
+          name: fontName,
+          url: fontUrl,
+          weights: [400, 700], // Default to normal and bold
+        }
+
         loadFontIntoDocument(fontName, fontUrl)
 
         // Add to uploaded fonts array
-        const newFont = { name: fontName, url: fontUrl }
         setUploadedFonts((prev) => {
           const updated = [...prev, newFont]
           // Save to localStorage
@@ -333,15 +378,71 @@ export default function FontCustomizer() {
   }
 
   return (
-    <div className="container mx-auto py-4 px-2 md:py-8 md:px-4" ref={containerRef}>
-      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-8 text-center">Font Customization Tool</h1>
+    <div className="container mx-auto py-4 px-2 md:py-8 md:px-4 min-h-screen flex flex-col" ref={containerRef}>
+      <header className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center">Font Customization Tool</h1>
+        <p className="text-center text-muted-foreground max-w-2xl mx-auto">
+          Create beautiful text designs with custom fonts, sizes, and colors. Perfect for social media posts, logos,
+          headers, and more. Export your designs as PNG or SVG for use in any project.
+        </p>
+      </header>
 
       {/* Mobile-friendly layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 flex-grow">
         {/* Preview Panel - Full width on mobile, column in desktop */}
         <Card className="md:col-span-2 lg:col-span-1 lg:row-span-2 order-1 md:order-2 lg:order-2">
           <CardContent className="p-4 md:p-6">
-            <h2 className="text-xl font-bold mb-2">Preview</h2>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl font-bold">Preview</h2>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <HelpCircle className="h-4 w-4" />
+                    <span>How to Use</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>How to Use the Font Customizer</DialogTitle>
+                    <DialogDescription>A step-by-step guide to creating beautiful text designs</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <h3 className="font-medium mb-1">1. Enter Your Text</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Type or paste your text in the text area. You can use multiple lines.
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1">2. Choose a Font</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Select from preset fonts or upload your own TTF/OTF files. You can also mark fonts as favorites.
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1">3. Customize Your Text</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Adjust size, weight, spacing, line height, color, and alignment to get the perfect look.
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1">4. Export Your Design</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Download your text as a PNG with transparent background or as a scalable SVG vector.
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1">Tips</h3>
+                      <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                        <li>Your settings are automatically saved for your next visit</li>
+                        <li>Uploaded fonts are stored in your browser for future use</li>
+                        <li>Use favorites to quickly access your most-used fonts</li>
+                      </ul>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             <div className="w-full bg-neutral-50 dark:bg-neutral-900 border rounded-lg p-6 md:p-8 min-h-[200px] md:min-h-[300px] flex items-center justify-center overflow-auto">
               <div
                 ref={previewRef}
@@ -413,14 +514,14 @@ export default function FontCustomizer() {
                 </ToggleGroup>
               </div>
 
-              <Tabs defaultValue="google">
+              <Tabs defaultValue="preset">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="google">Google Fonts</TabsTrigger>
+                  <TabsTrigger value="preset">Preset Fonts</TabsTrigger>
                   <TabsTrigger value="uploaded">Uploaded</TabsTrigger>
                   <TabsTrigger value="favorites">Favorites</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="google" className="space-y-4">
+                <TabsContent value="preset" className="space-y-4">
                   <FontSelector
                     onFontSelect={(font) => {
                       setSelectedFont(font)
@@ -511,7 +612,7 @@ export default function FontCustomizer() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="font-weight">Font Weight</Label>
+                <Label htmlFor="font-weight">Font Weight: {settings.fontWeight}</Label>
                 <Select
                   value={settings.fontWeight.toString()}
                   onValueChange={(value) => updateSettings({ fontWeight: Number.parseInt(value) })}
@@ -520,15 +621,19 @@ export default function FontCustomizer() {
                     <SelectValue placeholder="Select weight" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="100">Thin (100)</SelectItem>
-                    <SelectItem value="200">Extra Light (200)</SelectItem>
-                    <SelectItem value="300">Light (300)</SelectItem>
-                    <SelectItem value="400">Regular (400)</SelectItem>
-                    <SelectItem value="500">Medium (500)</SelectItem>
-                    <SelectItem value="600">Semi Bold (600)</SelectItem>
-                    <SelectItem value="700">Bold (700)</SelectItem>
-                    <SelectItem value="800">Extra Bold (800)</SelectItem>
-                    <SelectItem value="900">Black (900)</SelectItem>
+                    {availableWeights.map((weight) => (
+                      <SelectItem key={weight} value={weight.toString()}>
+                        {weight === 100 && "Thin (100)"}
+                        {weight === 200 && "Extra Light (200)"}
+                        {weight === 300 && "Light (300)"}
+                        {weight === 400 && "Regular (400)"}
+                        {weight === 500 && "Medium (500)"}
+                        {weight === 600 && "Semi Bold (600)"}
+                        {weight === 700 && "Bold (700)"}
+                        {weight === 800 && "Extra Bold (800)"}
+                        {weight === 900 && "Black (900)"}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -588,6 +693,9 @@ export default function FontCustomizer() {
           </CardContent>
         </Card>
       </div>
+
+      <footer className="mt-8 text-right text-sm text-muted-foreground">Created by FontMaster Studio</footer>
+
       <Toaster />
     </div>
   )

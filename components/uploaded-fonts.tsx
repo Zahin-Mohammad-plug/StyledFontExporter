@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 interface FontData {
   name: string
   url: string
+  weights?: number[]
 }
 
 interface UploadedFontsProps {
