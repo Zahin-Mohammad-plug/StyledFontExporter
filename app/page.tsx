@@ -257,12 +257,14 @@ export default function FontCustomizer() {
     if (!previewRef.current) return
 
     const textElement = previewRef.current
-    const { clientWidth, clientHeight } = textElement
 
-    // Calculate text dimensions with padding
-    const padding = 40
-    const width = clientWidth + padding * 2
-    const height = clientHeight + padding * 2
+    // Get the computed style to accurately measure text
+    const computedStyle = window.getComputedStyle(textElement)
+
+    // Calculate text dimensions with extra padding to prevent cutoff
+    const padding = 60 // Increased padding
+    const width = textElement.scrollWidth + padding * 2
+    const height = textElement.scrollHeight + padding * 2
 
     const canvas = document.createElement("canvas")
     canvas.width = width * 2 // Higher resolution
@@ -274,11 +276,16 @@ export default function FontCustomizer() {
     // Clear canvas (transparent background)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Set text properties
-    ctx.scale(2, 2) // Scale for higher resolution
+    // Scale for higher resolution
+    ctx.scale(2, 2)
+
+    // For custom fonts, we need to ensure they're loaded before drawing
+    // First, draw the text with a system font as fallback
     ctx.textBaseline = "top"
     ctx.fillStyle = settings.color
-    ctx.font = `${settings.fontWeight} ${settings.fontSize}px "${selectedFont}", sans-serif`
+
+    // Try to use the selected font, but with fallbacks
+    ctx.font = `${settings.fontWeight} ${settings.fontSize}px "${selectedFont}", Arial, sans-serif`
 
     // Handle text alignment
     let textX = padding
@@ -322,19 +329,36 @@ export default function FontCustomizer() {
     const svgNS = "http://www.w3.org/2000/svg"
     const svg = document.createElementNS(svgNS, "svg")
 
-    // Get text dimensions
+    // Get text dimensions with more accurate measurement
     const textElement = previewRef.current
-    const { clientWidth, clientHeight } = textElement
 
-    // Add padding
-    const padding = 40
-    const width = clientWidth + padding * 2
-    const height = clientHeight + padding * 2
+    // Add extra padding to prevent cutoff
+    const padding = 60 // Increased padding
+    const width = textElement.scrollWidth + padding * 2
+    const height = textElement.scrollHeight + padding * 2
 
     // Set SVG attributes
     svg.setAttribute("width", `${width}`)
     svg.setAttribute("height", `${height}`)
     svg.setAttribute("xmlns", svgNS)
+
+    // Add font definitions for custom fonts
+    if (uploadedFonts.some((f) => f.name === selectedFont)) {
+      const fontData = uploadedFonts.find((f) => f.name === selectedFont)
+      if (fontData) {
+        // Add a style element with the font definition
+        const style = document.createElementNS(svgNS, "style")
+        style.textContent = `
+          @font-face {
+            font-family: "${selectedFont}";
+            src: url(${fontData.url}) format("truetype");
+            font-weight: normal;
+            font-style: normal;
+          }
+        `
+        svg.appendChild(style)
+      }
+    }
 
     // Split text into lines
     const lines = settings.text.split("\n")
@@ -365,7 +389,7 @@ export default function FontCustomizer() {
       const textNode = document.createElementNS(svgNS, "text")
       textNode.setAttribute("x", `${xPos}`)
       textNode.setAttribute("y", `${yPos}`)
-      textNode.setAttribute("font-family", `"${selectedFont}", sans-serif`)
+      textNode.setAttribute("font-family", `"${selectedFont}", Arial, sans-serif`)
       textNode.setAttribute("font-size", `${settings.fontSize}px`)
       textNode.setAttribute("font-weight", `${settings.fontWeight}`)
       textNode.setAttribute("letter-spacing", `${settings.letterSpacing}px`)
@@ -426,7 +450,7 @@ export default function FontCustomizer() {
                     <span>How to Use</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent>
                   <DialogHeader>
                     <DialogTitle>How to Use the Font Customizer</DialogTitle>
                     <DialogDescription>A step-by-step guide to creating beautiful text designs</DialogDescription>
